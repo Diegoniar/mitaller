@@ -40,4 +40,12 @@ public class FichaTecnicaController {
         BigDecimal costo = fichaTecnicaService.calcularCostoMateriales(fichaId);
         return ResponseEntity.ok(Map.of("costoTotal", costo));
     }
+
+    @GetMapping("/{fichaId}/resumen-costos")
+    public ResponseEntity obtenerResumenCostos(
+            @PathVariable Long fichaId,
+            @RequestParam(required = false, defaultValue = "0") BigDecimal precioVenta) {
+
+        return ResponseEntity.ok(fichaTecnicaService.calcularCostoYMargen(fichaId, precioVenta));
+    }
 }
