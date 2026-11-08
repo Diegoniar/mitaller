@@ -46,6 +46,6 @@ public class FichaTecnicaController {
             @PathVariable Long fichaId,
             @RequestParam(required = false, defaultValue = "0") BigDecimal precioVenta) {
 
-        return ResponseEntity.ok(fichaTecnicaService.calcularCostoYMargen(fichaId, precioVenta));
+        return ResponseEntity.ok(fichaTecnicaService.calcularEstructuraCostosDetallada(fichaId, precioVenta));
     }
 }

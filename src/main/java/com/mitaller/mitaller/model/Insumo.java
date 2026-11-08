@@ -32,8 +32,11 @@ public class Insumo extends EntidadBase{
     @Column(nullable = false)
     private boolean activo = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private TipoInsumo tipoInsumo = TipoInsumo.AVIO;
+
     public enum UnidadMedida {
         METROS, UNIDADES, CONOS, KILOS, CENTIMETROS
     }
-
 }

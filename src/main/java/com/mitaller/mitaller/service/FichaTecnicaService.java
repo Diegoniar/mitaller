@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
+import com.mitaller.mitaller.model.TipoInsumo;
 
 @Service
 @RequiredArgsConstructor
@@ -68,7 +69,7 @@ public class FichaTecnicaService {
         return costoTotal.setScale(2, RoundingMode.HALF_UP); // Redondea a 2 decimales para moneda
     }
 
-    // Agrega este método al final de FichaTecnicaService:
+
     public Map<String, BigDecimal> calcularCostoYMargen(Long fichaId, BigDecimal precioVentaSugerido) {
         FichaTecnica ficha = fichaTecnicaRepository.findById(fichaId)
                 .orElseThrow(() -> new IllegalArgumentException("La ficha técnica no existe"));
@@ -101,6 +102,68 @@ public class FichaTecnicaService {
                 "costoMateriales", costoMateriales,
                 "costoManoObra", costoManoObra,
                 "costoTotalProduccion", costoTotalProduccion,
+                "precioVentaSugerido", precioVentaSugerido != null ? precioVentaSugerido : BigDecimal.ZERO,
+                "margenBruto", margenBruto,
+                "porcentajeMargen", porcentajeMargen
+        );
+    }
+
+    public Map<String, Object> calcularEstructuraCostosDetallada(Long fichaId, BigDecimal precioVentaSugerido) {
+        FichaTecnica ficha = fichaTecnicaRepository.findById(fichaId)
+                .orElseThrow(() -> new IllegalArgumentException("La ficha técnica no existe"));
+
+        List<FichaInsumo> insumos = fichaInsumoRepository.findByFichaTecnicaId(fichaId);
+
+        // 1. Costo y consumo de telas
+        BigDecimal costoTelas = BigDecimal.ZERO;
+        BigDecimal metrosTelaPorPrenda = BigDecimal.ZERO;
+
+        // 2. Costo de insumos menores / avíos
+        BigDecimal costoAvios = BigDecimal.ZERO;
+
+        // 3. Procesos especiales (estampado, bordado, lavandería)
+        BigDecimal costoProcesosEspeciales = BigDecimal.ZERO;
+
+        for (FichaInsumo item : insumos) {
+            BigDecimal factorMerma = BigDecimal.ONE.add(item.getPorcentajeMerma().divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP));
+            BigDecimal consumoReal = item.getCantidadNecesaria().multiply(factorMerma);
+            BigDecimal subtotal = consumoReal.multiply(item.getInsumo().getCostoUnitario());
+
+            if (item.getInsumo().getTipoInsumo() == TipoInsumo.TELA) {
+                costoTelas = costoTelas.add(subtotal);
+                metrosTelaPorPrenda = metrosTelaPorPrenda.add(consumoReal);
+            } else if (item.getInsumo().getTipoInsumo() == TipoInsumo.SERVICIO_EXTERNO) {
+                costoProcesosEspeciales = costoProcesosEspeciales.add(subtotal);
+            } else {
+                costoAvios = costoAvios.add(subtotal);
+            }
+        }
+
+        // 4. Mano de obra interna o confección base
+        BigDecimal costoManoObra = tarifaDestajoRepository.findAll().stream()
+                .filter(t -> t.getFichaTecnica().getId().equals(fichaId))
+                .map(TarifaDestajo::getValorPorUnidad)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal costoTotal = costoTelas.add(costoAvios).add(costoProcesosEspeciales).add(costoManoObra)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal margenBruto = BigDecimal.ZERO;
+        BigDecimal porcentajeMargen = BigDecimal.ZERO;
+        if (precioVentaSugerido != null && precioVentaSugerido.compareTo(BigDecimal.ZERO) > 0) {
+            margenBruto = precioVentaSugerido.subtract(costoTotal);
+            porcentajeMargen = margenBruto.divide(precioVentaSugerido, 4, RoundingMode.HALF_UP)
+                    .multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
+        }
+
+        return Map.of(
+                "referencia", ficha.getReferencia(),
+                "consumoTelaPorPrenda", metrosTelaPorPrenda.setScale(2, RoundingMode.HALF_UP),
+                "costoTelas", costoTelas.setScale(2, RoundingMode.HALF_UP),
+                "costoAvios", costoAvios.setScale(2, RoundingMode.HALF_UP),
+                "costoEstampadoBordadoLavanderia", costoProcesosEspeciales.setScale(2, RoundingMode.HALF_UP),
+                "costoManoObraDirecta", costoManoObra.setScale(2, RoundingMode.HALF_UP),
+                "costoTotalProduccion", costoTotal,
                 "precioVentaSugerido", precioVentaSugerido != null ? precioVentaSugerido : BigDecimal.ZERO,
                 "margenBruto", margenBruto,
                 "porcentajeMargen", porcentajeMargen
