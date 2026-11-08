@@ -5,7 +5,7 @@ import com.mitaller.mitaller.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.mitaller.mitaller.dto.FichaTecnicaCreacionDTO;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -44,7 +44,39 @@ public class FichaTecnicaService {
 
         return fichaInsumoRepository.save(detalle);
     }
+    public List<FichaTecnica> listarPorEmpresa(Long empresaId) {
+        return fichaTecnicaRepository.findByEmpresaIdAndActivoTrue(empresaId);
+    }
 
+    @Transactional
+    public FichaTecnica crearFichaCompleta(Long empresaId, FichaTecnicaCreacionDTO dto) {
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
+
+        FichaTecnica ficha = new FichaTecnica();
+        ficha.setEmpresa(empresa);
+        ficha.setReferencia(dto.getReferencia());
+        ficha.setDescripcion(dto.getDescripcion());
+        ficha.setTallas(dto.getTallas());
+        ficha.setActivo(true);
+        FichaTecnica fichaGuardada = fichaTecnicaRepository.save(ficha);
+
+        if (dto.getInsumos() != null) {
+            for (FichaTecnicaCreacionDTO.InsumoConsumoDTO item : dto.getInsumos()) {
+                Insumo insumo = insumoRepository.findById(item.getInsumoId())
+                        .orElseThrow(() -> new RuntimeException("Insumo no encontrado: " + item.getInsumoId()));
+
+                FichaInsumo fi = new FichaInsumo();
+                fi.setFichaTecnica(fichaGuardada);
+                fi.setInsumo(insumo);
+                fi.setCantidadNecesaria(item.getCantidadNecesaria());
+                fi.setPorcentajeMerma(item.getPorcentajeMerma() != null ? item.getPorcentajeMerma() : BigDecimal.ZERO);
+                fichaInsumoRepository.save(fi);
+            }
+        }
+
+        return fichaGuardada;
+    }
     // El cálculo de costos en tiempo real
     public BigDecimal calcularCostoMateriales(Long fichaId) {
         FichaTecnica ficha = fichaTecnicaRepository.findById(fichaId)

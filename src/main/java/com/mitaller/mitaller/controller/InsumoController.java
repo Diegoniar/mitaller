@@ -1,9 +1,7 @@
 package com.mitaller.mitaller.controller;
 
 import com.mitaller.mitaller.model.Insumo;
-import com.mitaller.mitaller.service.InsumoService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import com.mitaller.mitaller.repository.InsumoRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,18 +9,19 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/insumos")
-@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class InsumoController {
 
-    private final InsumoService insumoService;
+    private final InsumoRepository insumoRepository;
 
-    @PostMapping("/taller/{empresaId}")
-    public ResponseEntity<Insumo> registrarInsumo(@PathVariable Long empresaId, @RequestBody Insumo insumo) {
-        return new ResponseEntity<>(insumoService.registrarInsumo(empresaId, insumo), HttpStatus.CREATED);
+    public InsumoController(InsumoRepository insumoRepository) {
+        this.insumoRepository = insumoRepository;
     }
 
-    @GetMapping("/taller/{empresaId}")
+    @GetMapping("/empresa/{empresaId}")
     public ResponseEntity<List<Insumo>> listarInsumos(@PathVariable Long empresaId) {
-        return ResponseEntity.ok(insumoService.listarInsumosPorTaller(empresaId));
+        return ResponseEntity.ok(insumoRepository.findByEmpresaIdAndActivoTrue(empresaId));
     }
+
+
 }

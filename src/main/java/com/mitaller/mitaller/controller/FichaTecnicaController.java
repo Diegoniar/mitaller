@@ -1,5 +1,6 @@
 package com.mitaller.mitaller.controller;
 
+import com.mitaller.mitaller.dto.FichaTecnicaCreacionDTO;
 import com.mitaller.mitaller.model.FichaInsumo;
 import com.mitaller.mitaller.model.FichaTecnica;
 import com.mitaller.mitaller.service.FichaTecnicaService;
@@ -9,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -47,5 +49,17 @@ public class FichaTecnicaController {
             @RequestParam(required = false, defaultValue = "0") BigDecimal precioVenta) {
 
         return ResponseEntity.ok(fichaTecnicaService.calcularEstructuraCostosDetallada(fichaId, precioVenta));
+    }
+
+    @GetMapping("/empresa/{empresaId}")
+    public ResponseEntity<List<FichaTecnica>> listarPorEmpresa(@PathVariable Long empresaId) {
+        return ResponseEntity.ok(fichaTecnicaService.listarPorEmpresa(empresaId));
+    }
+
+    @PostMapping("/empresa/{empresaId}")
+    public ResponseEntity<FichaTecnica> crearFicha(
+            @PathVariable Long empresaId,
+            @RequestBody FichaTecnicaCreacionDTO dto) {
+        return ResponseEntity.ok(fichaTecnicaService.crearFichaCompleta(empresaId, dto));
     }
 }
