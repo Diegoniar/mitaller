@@ -1,5 +1,6 @@
 package com.mitaller.mitaller.service;
 
+import com.mitaller.mitaller.dto.OrdenProduccionCreacionDTO;
 import com.mitaller.mitaller.model.*;
 import com.mitaller.mitaller.repository.EmpresaRepository;
 import com.mitaller.mitaller.repository.FichaTecnicaRepository;
@@ -8,9 +9,12 @@ import com.mitaller.mitaller.repository.RegistroProduccionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.mitaller.mitaller.model.EstadoOrden;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import com.mitaller.mitaller.model.FichaTecnica;
+import com.mitaller.mitaller.model.OrdenProduccion;
 
 @Service
 @RequiredArgsConstructor
@@ -58,5 +62,30 @@ public class OrdenProduccionService {
                 "porcentajeAvance", Math.min(porcentajeAvance, 100.0),
                 "estado", orden.getEstado().name()
         );
+    }
+
+    @Transactional
+    public OrdenProduccion crearOrden(Long empresaId, OrdenProduccionCreacionDTO dto) {
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+
+        FichaTecnica ficha = fichaTecnicaRepository.findById(dto.getFichaTecnicaId())
+                .orElseThrow(() -> new IllegalArgumentException("Ficha técnica no encontrada"));
+
+        OrdenProduccion op = new OrdenProduccion();
+        op.setEmpresa(empresa);
+        op.setFichaTecnica(ficha);
+        op.setNumeroOrden(dto.getNumeroOrden());
+        op.setCantidadProgramada(dto.getCantidadProgramada());
+        op.setCantidadCortada(dto.getCantidadCortada() != null ? dto.getCantidadCortada() : dto.getCantidadProgramada());
+        op.setFechaInicio(dto.getFechaInicio() != null ? dto.getFechaInicio() : LocalDate.now());
+        op.setFechaEntregaEstimada(dto.getFechaEntregaEstimada());
+        op.setEstado(EstadoOrden.EN_CONFECCION);
+
+        return ordenProduccionRepository.save(op);
+    }
+
+    public List<OrdenProduccion> listarPorEmpresa(Long empresaId) {
+        return ordenProduccionRepository.findByEmpresaId(empresaId);
     }
 }

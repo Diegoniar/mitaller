@@ -12,4 +12,5 @@ import java.util.Optional;
 public interface OrdenProduccionRepository extends JpaRepository<OrdenProduccion, Long> {
     Optional<OrdenProduccion> findByNumeroOrden(String numeroOrden);
     List<OrdenProduccion> findByEmpresaIdAndEstado(Long empresaId, EstadoOrden estado);
+    List<OrdenProduccion> findByEmpresaId(Long empresaId);
 }
