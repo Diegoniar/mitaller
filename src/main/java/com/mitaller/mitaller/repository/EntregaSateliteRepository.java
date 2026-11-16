@@ -25,4 +25,6 @@ public interface EntregaSateliteRepository extends JpaRepository<EntregaSatelite
             LocalDate fechaFin
     );
 
+    List<EntregaSatelite> findByOrdenProduccionId(Long ordenProduccionID);
+
 }

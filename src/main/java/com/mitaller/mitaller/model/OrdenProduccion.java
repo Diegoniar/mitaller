@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "ordenes_produccion")
@@ -41,4 +43,15 @@ public class OrdenProduccion extends EntidadBase {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private EstadoOrden estado = EstadoOrden.PLANIFICADA; // PLANIFICADA, EN_PROCESO, FINALIZADA, CANCELADA
+
+    @OneToMany(mappedBy = "ordenProduccion", fetch = FetchType.LAZY)
+    private List<EntregaSatelite> entregas = new ArrayList<>();
+
+    public List<EntregaSatelite> getEntregas() {
+        return entregas;
+    }
+
+    public void setEntregas(List<EntregaSatelite> entregas) {
+        this.entregas = entregas;
+    }
 }

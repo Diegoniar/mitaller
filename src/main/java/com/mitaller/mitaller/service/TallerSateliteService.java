@@ -1,9 +1,6 @@
 package com.mitaller.mitaller.service;
 
-import com.mitaller.mitaller.model.EntregaSatelite;
-import com.mitaller.mitaller.model.LiquidacionSatelite;
-import com.mitaller.mitaller.model.OrdenProduccion;
-import com.mitaller.mitaller.model.TallerSatelite;
+import com.mitaller.mitaller.model.*;
 import com.mitaller.mitaller.repository.EntregaSateliteRepository;
 import com.mitaller.mitaller.repository.LiquidacionSateliteRepository;
 import com.mitaller.mitaller.repository.OrdenProduccionRepository;
@@ -58,16 +55,34 @@ public class TallerSateliteService {
         entrega.setFichaTecnica(orden.getFichaTecnica());
         entrega.setCantidadPrendas(cantidad);
         entrega.setPrecioPorPrenda(precioPorPrenda);
-
-        // Asignación de ambos campos para compatibilidad con la base de datos
         entrega.setTotalPagar(total);
         entrega.setTotalCobrado(total);
-
         entrega.setFechaEntrega(fecha != null ? fecha : LocalDate.now());
         entrega.setLiquidada(false);
         entrega.setLiquidado(false);
 
-        return entregaSateliteRepository.save(entrega);
+        EntregaSatelite guardada = entregaSateliteRepository.save(entrega);
+
+        // --- LÓGICA DE AVANCE Y CIERRE AUTOMÁTICO DE LA ORDEN ---
+        List<EntregaSatelite> entregasOrden = entregaSateliteRepository.findByOrdenProduccionId(ordenProduccionId);
+        int totalConfeccionado = entregasOrden.stream()
+                .mapToInt(EntregaSatelite::getCantidadPrendas)
+                .sum();
+
+        int metaOrden = (orden.getCantidadCortada() != null && orden.getCantidadCortada() > 0)
+                ? orden.getCantidadCortada()
+                : orden.getCantidadProgramada();
+
+        if (totalConfeccionado >= metaOrden) {
+            orden.setEstado(EstadoOrden.FINALIZADA);
+        } else if (totalConfeccionado > 0) {
+            orden.setEstado(EstadoOrden.EN_CONFECCION);
+        }
+
+        ordenProduccionRepository.save(orden);
+        // --------------------------------------------------------
+
+        return guardada;
     }
 
     @Transactional
