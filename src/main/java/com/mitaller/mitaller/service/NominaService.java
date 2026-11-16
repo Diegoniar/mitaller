@@ -40,34 +40,83 @@ public class NominaService {
         Empleado empleado = empleadoRepository.findById(empleadoId)
                 .orElseThrow(() -> new IllegalArgumentException("El operario no existe"));
 
-        // 1. Obtener los registros de trabajo del operario dentro del periodo
+        // Calcular días calendario del periodo (inclusive)
+        long diasPeriodo = java.time.temporal.ChronoUnit.DAYS.between(inicio, fin) + 1;
+        if (diasPeriodo <= 0) diasPeriodo = 1;
+
+        // 1. Obtener los registros de destajo/comisiones del operario dentro del periodo
         List<RegistroProduccion> registros = registroProduccionRepository
                 .findByEmpleadoIdAndFechaTrabajoBetween(empleadoId, inicio, fin);
 
-        // 2. Sumar el destajo devengado
         BigDecimal totalDestajo = registros.stream()
                 .map(RegistroProduccion::getTotalGanado)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 3. Calcular deducciones del trabajador (8% en total para contratos laborales)
-        BigDecimal deduccionSalud = totalDestajo.multiply(PORCENTAJE_SALUD_TRABAJADOR);
-        BigDecimal deduccionPension = totalDestajo.multiply(PORCENTAJE_PENSION_TRABAJADOR);
-        BigDecimal deducciones = deduccionSalud.add(deduccionPension);
+        // 2. Calcular salario base proporcional al periodo (Art. 133 y 147 CST)
+        BigDecimal salarioBase = empleado.getSalarioBase() != null ? empleado.getSalarioBase() : BigDecimal.ZERO;
+        BigDecimal salarioBaseProporcional = BigDecimal.ZERO;
 
-        // 4. Calcular provisiones empresariales (reserva de primas, cesantías y vacaciones)
-        BigDecimal provisiones = totalDestajo.multiply(FACTOR_PROVISIONES);
+        if (salarioBase.compareTo(BigDecimal.ZERO) > 0) {
+            salarioBaseProporcional = salarioBase
+                    .divide(new BigDecimal("30"), 4, RoundingMode.HALF_UP)
+                    .multiply(new BigDecimal(diasPeriodo));
+        }
 
-        // 5. Determinar neto en efectivo/transferencia para el operario
-        BigDecimal netoAPagar = totalDestajo.subtract(deducciones);
+        // 3. Descanso dominical remunerado sobre salario variable (Art. 172 y 176 CST)
+        // Si es contrato laboral con destajo y cubrió semana completa (6 o más días), se reconoce 1/6 del destajo
+        BigDecimal dominicalVariable = BigDecimal.ZERO;
+        if (empleado.getTipoVinculacion() != Empleado.TipoVinculacion.PRESTACION_SERVICIOS
+                && totalDestajo.compareTo(BigDecimal.ZERO) > 0
+                && diasPeriodo >= 6) {
+            dominicalVariable = totalDestajo.divide(new BigDecimal("6"), 2, RoundingMode.HALF_UP);
+        }
+
+        BigDecimal totalDestajoConDominical = totalDestajo.add(dominicalVariable);
+
+        // 4. Total Devengado Salarial (Art. 127 CST: Base + Destajo/Comisiones + Dominical)
+        BigDecimal totalDevengadoSalarial = salarioBaseProporcional.add(totalDestajoConDominical);
+
+        // 5. Auxilio de transporte proporcional (si aplica: contrato laboral y devenga <= 2 SMMLV)
+        BigDecimal auxilioTransporte = BigDecimal.ZERO;
+        BigDecimal smmlvReferencia = new BigDecimal("1423500"); // Ajustable según año vigente
+        BigDecimal auxilioMensual = new BigDecimal("200000");
+
+        if (empleado.getTipoVinculacion() != Empleado.TipoVinculacion.PRESTACION_SERVICIOS
+                && totalDevengadoSalarial.compareTo(BigDecimal.ZERO) > 0
+                && salarioBase.compareTo(smmlvReferencia.multiply(new BigDecimal("2"))) <= 0) {
+            auxilioTransporte = auxilioMensual
+                    .divide(new BigDecimal("30"), 4, RoundingMode.HALF_UP)
+                    .multiply(new BigDecimal(diasPeriodo));
+        }
+
+        // 6. Deducciones de Ley (4% Salud + 4% Pensión sobre el devengado salarial, sin incluir auxilio de transporte)
+        BigDecimal deducciones = BigDecimal.ZERO;
+        BigDecimal provisiones = BigDecimal.ZERO;
+
+        if (empleado.getTipoVinculacion() != Empleado.TipoVinculacion.PRESTACION_SERVICIOS) {
+            BigDecimal deduccionSalud = totalDevengadoSalarial.multiply(PORCENTAJE_SALUD_TRABAJADOR);
+            BigDecimal deduccionPension = totalDevengadoSalarial.multiply(PORCENTAJE_PENSION_TRABAJADOR);
+            deducciones = deduccionSalud.add(deduccionPension);
+
+            // 7. Provisiones Prestacionales del Empleador (Prima Art. 306, Cesantías Art. 249, Int. Cesantías, Vacaciones Art. 186)
+            // Prima y Cesantías incluyen auxilio de transporte; Vacaciones solo sobre salario base/variable
+            BigDecimal basePrestaciones = totalDevengadoSalarial.add(auxilioTransporte);
+            BigDecimal provPrimaYCesantias = basePrestaciones.multiply(new BigDecimal("0.1766")); // 8.33% + 8.33% + 1%
+            BigDecimal provVacaciones = totalDevengadoSalarial.multiply(new BigDecimal("0.0417")); // 4.17%
+            provisiones = provPrimaYCesantias.add(provVacaciones);
+        }
+
+        // 8. Neto real a transferir al trabajador
+        BigDecimal netoAPagar = totalDevengadoSalarial.add(auxilioTransporte).subtract(deducciones);
 
         LiquidacionNomina liquidacion = new LiquidacionNomina();
         liquidacion.setEmpresa(empresa);
         liquidacion.setEmpleado(empleado);
         liquidacion.setFechaInicio(inicio);
         liquidacion.setFechaFin(fin);
-        liquidacion.setTotalDestajo(totalDestajo.setScale(2, RoundingMode.HALF_UP));
-        liquidacion.setSalarioBaseProporcional(BigDecimal.ZERO);
-        liquidacion.setAuxilioTransporte(BigDecimal.ZERO); // Ajustable si devenga menos de 2 SMMLV
+        liquidacion.setTotalDestajo(totalDestajoConDominical.setScale(2, RoundingMode.HALF_UP));
+        liquidacion.setSalarioBaseProporcional(salarioBaseProporcional.setScale(2, RoundingMode.HALF_UP));
+        liquidacion.setAuxilioTransporte(auxilioTransporte.setScale(2, RoundingMode.HALF_UP));
         liquidacion.setDeducciones(deducciones.setScale(2, RoundingMode.HALF_UP));
         liquidacion.setProvisiones(provisiones.setScale(2, RoundingMode.HALF_UP));
         liquidacion.setNetoAPagar(netoAPagar.setScale(2, RoundingMode.HALF_UP));

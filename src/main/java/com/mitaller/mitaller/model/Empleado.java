@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 public class Empleado extends EntidadBase{
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "empresa_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Empresa empresa; // Relaciona al empleado con su respectivo taller
 
     @Column(nullable = false, length = 100)

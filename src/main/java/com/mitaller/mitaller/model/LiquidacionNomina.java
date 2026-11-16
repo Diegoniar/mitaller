@@ -18,10 +18,12 @@ public class LiquidacionNomina extends EntidadBase {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "empresa_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Empresa empresa;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "empleado_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Empleado empleado;
 
     @Column(nullable = false)

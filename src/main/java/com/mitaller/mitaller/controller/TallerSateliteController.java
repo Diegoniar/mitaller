@@ -2,6 +2,7 @@ package com.mitaller.mitaller.controller;
 
 import com.mitaller.mitaller.model.EntregaSatelite;
 import com.mitaller.mitaller.model.LiquidacionSatelite;
+import com.mitaller.mitaller.model.TallerSatelite;
 import com.mitaller.mitaller.service.TallerSateliteService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/satelites")
@@ -44,5 +46,17 @@ public class TallerSateliteController {
             @RequestParam(required = false) String observaciones) {
         return ResponseEntity.ok(tallerSateliteService.liquidarPeriodo(
                 empresaId, sateliteId, fechaInicio, fechaFin, retenciones, observaciones));
+    }
+
+    @GetMapping("/empresa/{empresaId}")
+    public ResponseEntity<List<TallerSatelite>> listarSatelites(@PathVariable Long empresaId) {
+        return ResponseEntity.ok(tallerSateliteService.listarPorEmpresa(empresaId));
+    }
+
+    @PostMapping("/empresa/{empresaId}")
+    public ResponseEntity<TallerSatelite> crearSatelite(
+            @PathVariable Long empresaId,
+            @RequestBody TallerSatelite satelite) {
+        return ResponseEntity.ok(tallerSateliteService.crearSatelite(empresaId, satelite));
     }
 }

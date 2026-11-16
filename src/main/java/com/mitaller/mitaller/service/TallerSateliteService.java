@@ -1,10 +1,8 @@
 package com.mitaller.mitaller.service;
 
 import com.mitaller.mitaller.model.*;
-import com.mitaller.mitaller.repository.EntregaSateliteRepository;
-import com.mitaller.mitaller.repository.LiquidacionSateliteRepository;
-import com.mitaller.mitaller.repository.OrdenProduccionRepository;
-import com.mitaller.mitaller.repository.TallerSateliteRepository;
+import com.mitaller.mitaller.repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +17,8 @@ public class TallerSateliteService {
     private final OrdenProduccionRepository ordenProduccionRepository;
     private final EntregaSateliteRepository entregaSateliteRepository;
     private final LiquidacionSateliteRepository liquidacionSateliteRepository;
+    @Autowired
+    private EmpresaRepository empresaRepository;
 
     public TallerSateliteService(
             TallerSateliteRepository tallerSateliteRepository,
@@ -136,5 +136,21 @@ public class TallerSateliteService {
         });
 
         return guardada;
+    }
+
+    public List<TallerSatelite> listarPorEmpresa(Long empresaId) {
+        return tallerSateliteRepository.findByEmpresaId(empresaId);
+    }
+
+    @Transactional
+    public TallerSatelite crearSatelite(Long empresaId, TallerSatelite datos) {
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+
+        datos.setEmpresa(empresa);
+        if (datos.getActivo() == null) {
+            datos.setActivo(true);
+        }
+        return tallerSateliteRepository.save(datos);
     }
 }
