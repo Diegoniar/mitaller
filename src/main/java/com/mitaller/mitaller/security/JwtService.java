@@ -14,7 +14,10 @@ import java.util.Date;
 public class JwtService {
 
     // Clave secreta de 256 bits (en producción se lee desde variable de entorno)
-    private static final String SECRET = "MiTallerSaaSClaveSecretaSuperSeguraParaJWT2026Confeccion!";
+    private static final String SECRET = System.getenv().getOrDefault(
+            "JWT_SECRET",
+            "MiTallerSaaSClaveSecretaSuperSeguraParaJWT2026Confeccion!"
+    );
     private static final long EXPIRATION_MS = 1000L * 60 * 60 * 24; // 24 horas
 
     private SecretKey getSigningKey() {
