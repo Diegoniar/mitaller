@@ -16,6 +16,7 @@ public class FaseProduccion extends EntidadBase {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "empresa_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Empresa empresa;
 
     @Column(nullable = false, length = 50)
