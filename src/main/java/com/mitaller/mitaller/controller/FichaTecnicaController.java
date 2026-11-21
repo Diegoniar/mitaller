@@ -3,6 +3,7 @@ package com.mitaller.mitaller.controller;
 import com.mitaller.mitaller.dto.FichaTecnicaCreacionDTO;
 import com.mitaller.mitaller.model.FichaInsumo;
 import com.mitaller.mitaller.model.FichaTecnica;
+import com.mitaller.mitaller.repository.FichaTecnicaRepository;
 import com.mitaller.mitaller.service.FichaTecnicaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ import java.util.Map;
 public class FichaTecnicaController {
 
     private final FichaTecnicaService fichaTecnicaService;
+    private final FichaTecnicaRepository fichaTecnicaRepository;
 
     // 1. Crear la ficha base (Ej: Pantalón)
     @PostMapping("/taller/{empresaId}")
@@ -61,5 +63,19 @@ public class FichaTecnicaController {
             @PathVariable Long empresaId,
             @RequestBody FichaTecnicaCreacionDTO dto) {
         return ResponseEntity.ok(fichaTecnicaService.crearFichaCompleta(empresaId, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarFicha(@PathVariable Long id) {
+        if (!fichaTecnicaRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            fichaTecnicaRepository.deleteById(id);
+            return ResponseEntity.ok(Map.of("mensaje", "Ficha técnica eliminada correctamente"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("mensaje", "No se puede eliminar esta prenda porque ya tiene órdenes o producción asociada."));
+        }
     }
 }
