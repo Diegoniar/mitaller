@@ -1,5 +1,6 @@
 package com.mitaller.mitaller.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -16,12 +17,12 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FichaInsumo extends EntidadBase {
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ficha_tecnica_id", nullable = false)
+    @JsonBackReference
     private FichaTecnica fichaTecnica;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "insumo_id", nullable = false)
     private Insumo insumo;
 

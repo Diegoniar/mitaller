@@ -1,5 +1,7 @@
 package com.mitaller.mitaller.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -18,6 +20,7 @@ public class FichaTecnica extends EntidadBase {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "empresa_id", nullable = false)
+    @JsonIgnore
     private Empresa empresa;
 
     @Column(nullable = false, length = 50)
@@ -32,7 +35,7 @@ public class FichaTecnica extends EntidadBase {
     @Column(nullable = false)
     private boolean activo = true;
 
-    // Relación uno a muchos: Una ficha tiene muchos insumos asociados
-    @OneToMany(mappedBy = "fichaTecnica", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "fichaTecnica", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @JsonManagedReference
     private List<FichaInsumo> materiales = new ArrayList<>();
 }
